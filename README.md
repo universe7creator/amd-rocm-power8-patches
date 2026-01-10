@@ -13,7 +13,8 @@ Successfully compiled January 10, 2025.
 | **ROCT-Thunk-Interface** | 5.7.1 | ✅ Built & Installed | HSA kernel interface |
 | **LLVM/Clang** | 17.0.0 | ✅ Built & Installed | AMDGPU + PowerPC targets |
 | **ROCR-Runtime** | 5.7.1 | ✅ Built & Installed | HSA runtime library (libhsa-runtime64.so) |
-| **ROCm Drivers** | - | ⚠️ Partial | amdgpu loads, KFD needs kernel rebuild |
+| **Linux Kernel** | 6.1.x | ⚠️ Requires Custom | Debian Bookworm base, HSA_AMD=y needed |
+| **PowerElyan** | 1.0 | 🔄 In Progress | Custom distro with HSA kernel |
 
 ## Current Status: RX 580 Detected!
 
@@ -39,21 +40,26 @@ DRM: /dev/dri/card0, /dev/dri/renderD128 available
 - Requires `CONFIG_HSA_AMD=y` in kernel config
 - Stock kernel: `CONFIG_DRM_AMDGPU=m` but no HSA
 
-### Solution: Custom Kernel Build
+### Solution: PowerElyan Linux
 
-The Ubuntu ppc64le kernel needs to be rebuilt with HSA support. Required config:
+**Key Discovery**: Debian Bookworm kernel 6.1.x now supports `CONFIG_HSA_AMD` on PPC64 (added upstream), but Debian has it **disabled** in their ppc64el config!
 
 ```
-CONFIG_HSA_AMD=y
-CONFIG_DRM_AMDGPU=m
-CONFIG_DRM_AMDGPU_USERPTR=y
+# Debian Bookworm 6.1.137 ppc64el kernel config:
+CONFIG_DRM_AMDGPU=m          # ✅ AMDGPU driver enabled
+# CONFIG_HSA_AMD is not set  # ❌ HSA/KFD NOT enabled!
 ```
 
-**Kernel build dependencies** (built from source due to broken apt):
-- m4 1.4.19
-- flex 2.6.4
-- bison 3.8.2
-- OpenSSL headers (needed for module signing)
+**PowerElyan** is our custom Linux distribution based on Debian Bookworm with a kernel rebuilt with:
+
+```
+CONFIG_HSA_AMD=y             # ✅ HSA kernel driver enabled
+CONFIG_DRM_AMDGPU=m          # ✅ AMDGPU as module
+CONFIG_DRM_AMDGPU_USERPTR=y  # ✅ Userspace pointers
+CONFIG_MMU_NOTIFIER=y        # ✅ Required by HSA_AMD
+```
+
+See [power8-projects](https://github.com/Scottcjn/power8-projects) for PowerElyan builds.
 
 **ROCm Installation Path**: `/opt/rocm/`
 - Libraries: `/opt/rocm/lib/` (libhsa-runtime64.so, libhsakmt.a)
