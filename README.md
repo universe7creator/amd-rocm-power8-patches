@@ -13,7 +13,47 @@ Successfully compiled January 10, 2025.
 | **ROCT-Thunk-Interface** | 5.7.1 | ✅ Built & Installed | HSA kernel interface |
 | **LLVM/Clang** | 17.0.0 | ✅ Built & Installed | AMDGPU + PowerPC targets |
 | **ROCR-Runtime** | 5.7.1 | ✅ Built & Installed | HSA runtime library (libhsa-runtime64.so) |
-| **ROCm Drivers** | - | Pending | amdgpu kernel module |
+| **ROCm Drivers** | - | ⚠️ Partial | amdgpu loads, KFD needs kernel rebuild |
+
+## Current Status: RX 580 Detected!
+
+The RX 580 (Polaris/Ellesmere) is detected and working with the amdgpu kernel driver:
+
+```
+Device: 1002:67df (AMD Ellesmere - RX 580)
+Driver: amdgpu loaded
+VRAM: 8192MB detected
+DRM: /dev/dri/card0, /dev/dri/renderD128 available
+```
+
+**Issue**: `/dev/kfd` is missing - the stock Ubuntu 20.04 kernel for ppc64le does not have `CONFIG_HSA_AMD` enabled.
+
+### What Works
+- GPU detected on PCIe bus via OCuLink
+- amdgpu kernel module loads
+- 8GB VRAM recognized
+- Display/graphics output functional
+
+### What's Missing for ROCm Compute
+- `/dev/kfd` (HSA Kernel Fusion Driver)
+- Requires `CONFIG_HSA_AMD=y` in kernel config
+- Stock kernel: `CONFIG_DRM_AMDGPU=m` but no HSA
+
+### Solution: Custom Kernel Build
+
+The Ubuntu ppc64le kernel needs to be rebuilt with HSA support. Required config:
+
+```
+CONFIG_HSA_AMD=y
+CONFIG_DRM_AMDGPU=m
+CONFIG_DRM_AMDGPU_USERPTR=y
+```
+
+**Kernel build dependencies** (built from source due to broken apt):
+- m4 1.4.19
+- flex 2.6.4
+- bison 3.8.2
+- OpenSSL headers (needed for module signing)
 
 **ROCm Installation Path**: `/opt/rocm/`
 - Libraries: `/opt/rocm/lib/` (libhsa-runtime64.so, libhsakmt.a)
