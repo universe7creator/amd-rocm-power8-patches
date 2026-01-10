@@ -13,8 +13,8 @@ Successfully compiled January 10, 2025.
 | **ROCT-Thunk-Interface** | 5.7.1 | ✅ Built & Installed | HSA kernel interface |
 | **LLVM/Clang** | 17.0.0 | ✅ Built & Installed | AMDGPU + PowerPC targets |
 | **ROCR-Runtime** | 5.7.1 | ✅ Built & Installed | HSA runtime library (libhsa-runtime64.so) |
-| **Linux Kernel** | 6.1.x | ⚠️ Requires Custom | Debian Bookworm base, HSA_AMD=y needed |
-| **PowerElyan** | 1.0 | 🔄 In Progress | Custom distro with HSA kernel |
+| **Linux Kernel** | 6.1.159 | ✅ Built | PowerElyan HSA kernel with CONFIG_HSA_AMD=y |
+| **PowerElyan** | 1.0 | ✅ Ready | Custom distro with HSA kernel + NVIDIA support |
 
 ## Current Status: RX 580 Detected!
 
@@ -224,9 +224,25 @@ ls /opt/rocm/include/hsa/
 
 ## Next Steps
 
-- Build amdgpu kernel driver for POWER8
-- Test RX 580 via OCuLink
-- Build HIP runtime
+- [x] ~~Build amdgpu kernel driver for POWER8~~ ✅ Included in PowerElyan HSA kernel
+- [x] ~~Test RX 580 via OCuLink~~ ✅ Working with amdgpu driver
+- [ ] Boot PowerElyan kernel and verify `/dev/kfd`
+- [ ] Run rocminfo and verify GPU agent detection
+- [ ] Build HIP runtime for POWER8
+- [ ] Benchmark RX 580 compute performance
+
+## Also: NVIDIA Support
+
+We've also built NVIDIA Tesla drivers for POWER8! See companion project.
+
+| Component | Version | Status |
+|-----------|---------|--------|
+| nvidia-open | 550.54.14 | ✅ Built for PowerElyan kernel |
+| V100 32GB | PCIe | 🔜 Testing pending |
+
+**Package**: `nvidia-power8-550.54.14.deb` (15 MB)
+
+Includes POWER8 NPU stub patches (POWER8 has no NVLink - that's POWER9+).
 
 ## Credits
 
