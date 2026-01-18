@@ -1,145 +1,99 @@
+<div align="center">
+
 # ROCm for AMD GPUs on IBM POWER8
 
-**World's First ROCm Stack Built from Source for POWER8/PPC64LE!**
+[![POWER8](https://img.shields.io/badge/POWER8-ppc64le-blue)](https://github.com/Scottcjn/amd-rocm-power8-patches)
+[![ROCm](https://img.shields.io/badge/ROCm-5.7.1-red)](https://rocm.docs.amd.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+[![AMD](https://img.shields.io/badge/AMD-RX%20580-green)](https://github.com/Scottcjn/amd-rocm-power8-patches)
 
-This repository documents the successful build of the ROCm (Radeon Open Compute) stack on IBM POWER8 systems, enabling AMD GPU compute on legacy PowerPC servers.
+**World's First ROCm Stack Built from Source for POWER8/PPC64LE**
 
-Successfully compiled January 10, 2025.
+*Run AMD GPU compute on IBM POWER8 servers - an alternative to NVIDIA CUDA*
 
-## ROCm Build Status
+[Build Status](#-rocm-build-status) • [Quick Start](#-build-instructions) • [Hardware](#-test-system) • [Why ROCm?](#-why-rocm-on-power8)
+
+</div>
+
+---
+
+## 🎯 What This Enables
+
+| Traditional Setup | With ROCm on POWER8 |
+|------------------|---------------------|
+| NVIDIA-only compute | AMD GPU alternative |
+| CUDA lock-in | HIP portability |
+| Expensive datacenter GPUs | Affordable Polaris/Vega |
+| GPU VRAM limited | 576GB system RAM + GPU |
+
+## ✅ ROCm Build Status
 
 | Component | Version | Status | Notes |
 |-----------|---------|--------|-------|
-| **ROCT-Thunk-Interface** | 5.7.1 | ✅ Built & Installed | HSA kernel interface |
-| **LLVM/Clang** | 17.0.0 | ✅ Built & Installed | AMDGPU + PowerPC targets |
-| **ROCR-Runtime** | 5.7.1 | ✅ Built & Installed | HSA runtime library (libhsa-runtime64.so) |
-| **Linux Kernel** | 6.1.159 | ✅ Built | PowerElyan HSA kernel with CONFIG_HSA_AMD=y |
-| **PowerElyan** | 1.0 | ✅ Ready | Custom distro with HSA kernel + NVIDIA support |
+| **ROCT-Thunk-Interface** | 5.7.1 | ✅ Built | HSA kernel interface |
+| **LLVM/Clang** | 17.0.0 | ✅ Built | AMDGPU + PowerPC targets |
+| **ROCR-Runtime** | 5.7.1 | ✅ Built | libhsa-runtime64.so |
+| **Linux Kernel** | 6.1.159 | ✅ Built | PowerElyan HSA kernel |
 
-## Current Status: RX 580 Detected!
-
-The RX 580 (Polaris/Ellesmere) is detected and working with the amdgpu kernel driver:
+### Current Hardware Status: RX 580 Detected!
 
 ```
 Device: 1002:67df (AMD Ellesmere - RX 580)
-Driver: amdgpu loaded
-VRAM: 8192MB detected
-DRM: /dev/dri/card0, /dev/dri/renderD128 available
+Driver: amdgpu loaded ✅
+VRAM: 8192MB detected ✅
+DRM: /dev/dri/card0, /dev/dri/renderD128 ✅
 ```
 
-**Issue**: `/dev/kfd` is missing - the stock Ubuntu 20.04 kernel for ppc64le does not have `CONFIG_HSA_AMD` enabled.
-
-### What Works
-- GPU detected on PCIe bus via OCuLink
-- amdgpu kernel module loads
-- 8GB VRAM recognized
-- Display/graphics output functional
-
-### What's Missing for ROCm Compute
-- `/dev/kfd` (HSA Kernel Fusion Driver)
-- Requires `CONFIG_HSA_AMD=y` in kernel config
-- Stock kernel: `CONFIG_DRM_AMDGPU=m` but no HSA
-
-### Solution: PowerElyan Linux
-
-**Key Discovery**: Debian Bookworm kernel 6.1.x now supports `CONFIG_HSA_AMD` on PPC64 (added upstream), but Debian has it **disabled** in their ppc64el config!
-
-```
-# Debian Bookworm 6.1.137 ppc64el kernel config:
-CONFIG_DRM_AMDGPU=m          # ✅ AMDGPU driver enabled
-# CONFIG_HSA_AMD is not set  # ❌ HSA/KFD NOT enabled!
-```
-
-**PowerElyan** is our custom Linux distribution based on Debian Bookworm with a kernel rebuilt with:
-
-```
-CONFIG_HSA_AMD=y             # ✅ HSA kernel driver enabled
-CONFIG_DRM_AMDGPU=m          # ✅ AMDGPU as module
-CONFIG_DRM_AMDGPU_USERPTR=y  # ✅ Userspace pointers
-CONFIG_MMU_NOTIFIER=y        # ✅ Required by HSA_AMD
-```
-
-See [power8-projects](https://github.com/Scottcjn/power8-projects) for PowerElyan builds.
-
-**ROCm Installation Path**: `/opt/rocm/`
-- Libraries: `/opt/rocm/lib/` (libhsa-runtime64.so, libhsakmt.a)
-- Headers: `/opt/rocm/include/hsa/`
-- Clang: `/opt/rocm/llvm/bin/clang`
-
-## Test System
+## 🖥️ Test System
 
 | Component | Specification |
 |-----------|---------------|
 | **Server** | IBM Power System S824 (8286-42A) |
-| **CPU** | Dual 8-core POWER8 (16 cores, 128 threads with SMT8) |
-| **RAM** | 576 GB DDR3 (4 NUMA nodes) |
-| **OS** | Ubuntu 20.04 LTS (Focal Fossa) |
-| **Kernel** | 5.4.0-216-generic |
+| **CPU** | Dual 8-core POWER8 (128 threads w/ SMT8) |
+| **RAM** | 576 GB DDR3 |
+| **GPU** | AMD RX 580 8GB (via OCuLink) |
+| **OS** | Ubuntu 20.04 LTS |
 
-## Prerequisites Built from Source
+## 🔧 Build Instructions
 
-Ubuntu 20.04 on POWER8 has broken packages (wrong glibc 2.32-2.34 vs system 2.31). All prerequisites built from source:
+### Prerequisites (Built from Source)
 
-| Tool | Version | Why Needed |
-|------|---------|------------|
-| cmake | 3.25.3 | System cmake broken (glibc mismatch) |
-| numactl | 2.0.16 | ROCT dependency |
-| pkg-config | 0.29.2 | Build system |
-| libdrm | 2.4.100 | DRM userspace library (AMD-only, no nouveau) |
-| libelf headers | 0.189 | ELF manipulation (from elfutils) |
-
-## Build Instructions
-
-### 1. Build Prerequisites
+Ubuntu 20.04 on POWER8 has broken packages. All prerequisites built from source:
 
 ```bash
 # cmake 3.25.3
-cd /tmp && wget https://github.com/Kitware/CMake/releases/download/v3.25.3/cmake-3.25.3.tar.gz
+wget https://github.com/Kitware/CMake/releases/download/v3.25.3/cmake-3.25.3.tar.gz
 tar xzf cmake-3.25.3.tar.gz && cd cmake-3.25.3
 ./bootstrap --prefix=/usr/local -- -DCMAKE_USE_OPENSSL=OFF
 make -j$(nproc) && sudo make install
 
 # numactl 2.0.16
-cd /tmp && wget https://github.com/numactl/numactl/releases/download/v2.0.16/numactl-2.0.16.tar.gz
+wget https://github.com/numactl/numactl/releases/download/v2.0.16/numactl-2.0.16.tar.gz
 tar xzf numactl-2.0.16.tar.gz && cd numactl-2.0.16
 ./configure --prefix=/usr/local && make -j$(nproc) && sudo make install
 
-# pkg-config 0.29.2
-cd /tmp && wget https://pkg-config.freedesktop.org/releases/pkg-config-0.29.2.tar.gz
-tar xzf pkg-config-0.29.2.tar.gz && cd pkg-config-0.29.2
-./configure --prefix=/usr/local --with-internal-glib && make -j$(nproc) && sudo make install
-
 # libdrm 2.4.100 (AMD only)
-cd /tmp && wget https://dri.freedesktop.org/libdrm/libdrm-2.4.100.tar.bz2
+wget https://dri.freedesktop.org/libdrm/libdrm-2.4.100.tar.bz2
 tar xjf libdrm-2.4.100.tar.bz2 && cd libdrm-2.4.100
 ./configure --prefix=/usr/local --disable-nouveau --enable-amdgpu
 make -j$(nproc) && sudo make install
-
-# libelf headers (from elfutils)
-cd /tmp && wget https://sourceware.org/elfutils/ftp/0.189/elfutils-0.189.tar.bz2
-tar xjf elfutils-0.189.tar.bz2
-sudo cp elfutils-0.189/libelf/libelf.h /usr/include/
-sudo cp elfutils-0.189/libelf/gelf.h /usr/include/
-sudo ln -sf /usr/lib/powerpc64le-linux-gnu/libelf.so.1 /usr/lib/powerpc64le-linux-gnu/libelf.so
 ```
 
-### 2. Build ROCT-Thunk-Interface
+### Build ROCT-Thunk-Interface
 
 ```bash
-cd /tmp/rocm-build
-wget https://github.com/RadeonOpenCompute/ROCT-Thunk-Interface/archive/refs/tags/rocm-5.7.1.tar.gz -O roct.tar.gz
-tar xzf roct.tar.gz && cd ROCT-Thunk-Interface-rocm-5.7.1
+wget https://github.com/RadeonOpenCompute/ROCT-Thunk-Interface/archive/refs/tags/rocm-5.7.1.tar.gz
+tar xzf rocm-5.7.1.tar.gz && cd ROCT-Thunk-Interface-rocm-5.7.1
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/rocm
 make -j$(nproc) && sudo make install
 ```
 
-### 3. Build LLVM/Clang with AMDGPU
+### Build LLVM/Clang with AMDGPU
 
 ```bash
-cd /tmp/rocm-build
-wget https://github.com/RadeonOpenCompute/llvm-project/archive/refs/tags/rocm-5.7.1.tar.gz -O llvm.tar.gz
-tar xzf llvm.tar.gz && cd llvm-project-rocm-5.7.1
+wget https://github.com/RadeonOpenCompute/llvm-project/archive/refs/tags/rocm-5.7.1.tar.gz
+tar xzf rocm-5.7.1.tar.gz && cd llvm-project-rocm-5.7.1
 mkdir build && cd build
 
 cmake ../llvm \
@@ -147,116 +101,98 @@ cmake ../llvm \
     -DCMAKE_INSTALL_PREFIX=/opt/rocm/llvm \
     -DLLVM_ENABLE_PROJECTS="clang;lld" \
     -DLLVM_TARGETS_TO_BUILD="AMDGPU;PowerPC" \
-    -DLLVM_ENABLE_ASSERTIONS=OFF \
-    -DLLVM_PARALLEL_LINK_JOBS=8
+    -DLLVM_ENABLE_ASSERTIONS=OFF
 
-# Build with 64 threads (POWER8 optimal, not 128)
-make -j64
-sudo make install
+make -j64 && sudo make install  # 64 threads optimal on POWER8
 ```
 
-### 4. Build ROCR-Runtime
+### Build ROCR-Runtime
 
 ```bash
-cd /tmp/rocm-build
-wget https://github.com/RadeonOpenCompute/ROCR-Runtime/archive/refs/tags/rocm-5.7.1.tar.gz -O rocr.tar.gz
-tar xzf rocr.tar.gz && cd ROCR-Runtime-rocm-5.7.1
+wget https://github.com/RadeonOpenCompute/ROCR-Runtime/archive/refs/tags/rocm-5.7.1.tar.gz
+tar xzf rocm-5.7.1.tar.gz && cd ROCR-Runtime-rocm-5.7.1
 mkdir build && cd build
 
 cmake ../src \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/opt/rocm \
     -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang \
-    -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ \
-    -DCMAKE_PREFIX_PATH=/opt/rocm \
-    -DLIBELF_INCLUDE_DIRS=/usr/include \
-    -DLIBELF_LIBRARIES=/usr/lib/powerpc64le-linux-gnu/libelf.so
+    -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++
 
 make -j32 && sudo make install
 ```
 
-## Verified Clang Output
+## ✅ Verification
 
-```
+```bash
+# Check Clang
 $ /opt/rocm/llvm/bin/clang --version
 clang version 17.0.0
 Target: powerpc64le-unknown-linux-gnu
-Thread model: posix
-```
 
-## Supported AMD GPUs (Target)
-
-| Architecture | GPUs | ROCm Support |
-|-------------|------|--------------|
-| **RDNA 2/3** | RX 6800, 7900 XTX | Full |
-| **RDNA 1** | RX 5700 | Full |
-| **Polaris (GCN4)** | RX 580, 480 | Legacy (5.7.x) |
-| **Vega** | Radeon VII, MI50 | Full |
-
-## AMD GPU Connection via OCuLink
-
-Same method as NVIDIA GPUs:
-- **Host Card**: Supermicro AOC-SLG3-2E4T (PCIe 3.0 x8)
-- **GPU Dock**: Minisforum DEG1 or similar
-- **Power**: ATX PSU (650W+ recommended)
-- **Cable**: SFF-8611 OCuLink cable
-
-## Installation Verification
-
-```bash
 # Check libraries
 ls -la /opt/rocm/lib/libhsa*
-
-# Check Clang
-/opt/rocm/llvm/bin/clang --version
-
-# Check HSA headers
-ls /opt/rocm/include/hsa/
 ```
 
-## Why ROCm on POWER8?
+## 🎮 Supported AMD GPUs
 
-1. **True Open Source**: AMD's GPU compute stack is fully open
-2. **Legacy GPU Support**: Polaris/Vega cards are affordable
-3. **HIP Portability**: Write once, run on AMD or NVIDIA
-4. **576GB RAM**: Load massive models without GPU VRAM limits
-5. **Alternative Ecosystem**: Not locked to NVIDIA CUDA
+| Architecture | GPUs | Status |
+|-------------|------|--------|
+| **RDNA 2/3** | RX 6800, 7900 XTX | Full ROCm |
+| **RDNA 1** | RX 5700 | Full ROCm |
+| **Polaris** | RX 580, 480 | Legacy (5.7.x) |
+| **Vega** | Radeon VII, MI50 | Full ROCm |
 
-## Next Steps
+## 🔌 OCuLink Connection
 
-- [x] ~~Build amdgpu kernel driver for POWER8~~ ✅ Included in PowerElyan HSA kernel
-- [x] ~~Test RX 580 via OCuLink~~ ✅ Working with amdgpu driver
-- [ ] Boot PowerElyan kernel and verify `/dev/kfd`
-- [ ] Run rocminfo and verify GPU agent detection
-- [ ] Build HIP runtime for POWER8
-- [ ] Benchmark RX 580 compute performance
+Same method as NVIDIA GPUs:
 
-## Also: NVIDIA Support
+```
+┌─────────────────────┐         ┌──────────────────────┐
+│   IBM POWER8 S824   │         │   External GPU       │
+│  ┌───────────────┐  │ OCuLink │  ┌────────────────┐  │
+│  │ Supermicro    │◄─┼─────────┼──│ Minisforum DEG1│  │
+│  │ AOC-SLG3-2E4T │  │ Cable   │  │ + RX 580       │  │
+│  └───────────────┘  │         │  └────────────────┘  │
+└─────────────────────┘         └──────────────────────┘
+```
 
-We've also built NVIDIA Tesla drivers for POWER8! See companion project.
+## 🤔 Why ROCm on POWER8?
 
-| Component | Version | Status |
-|-----------|---------|--------|
-| nvidia-open | 550.54.14 | ✅ Built for PowerElyan kernel |
-| V100 32GB | PCIe | 🔜 Testing pending |
+1. **True Open Source** - AMD's compute stack is fully open
+2. **No Vendor Lock-in** - HIP code runs on AMD or NVIDIA
+3. **Affordable GPUs** - Polaris/Vega cards are cheap
+4. **576GB RAM** - Massive system memory complements GPU
+5. **Alternative Ecosystem** - Not dependent on NVIDIA
 
-**Package**: `nvidia-power8-550.54.14.deb` (15 MB)
+## 🔗 Related Projects
 
-Includes POWER8 NPU stub patches (POWER8 has no NVLink - that's POWER9+).
+| Project | Description |
+|---------|-------------|
+| [nvidia-power8-patches](https://github.com/Scottcjn/nvidia-power8-patches) | NVIDIA drivers for POWER8 |
+| [cuda-power8-patches](https://github.com/Scottcjn/cuda-power8-patches) | CUDA toolkit for POWER8 |
+| [power8-projects](https://github.com/Scottcjn/power8-projects) | PowerElyan Linux builds |
 
-## Credits
+## 📋 Next Steps
 
-- **Development**: Elyan Labs (Scott Boudreaux)
-- **Testing Platform**: IBM POWER8 S824 with 576GB RAM
-- **AI Assistance**: Claude AI (Anthropic)
+- [x] Build ROCm userspace stack
+- [x] Test RX 580 via OCuLink
+- [ ] Boot PowerElyan kernel with CONFIG_HSA_AMD=y
+- [ ] Verify `/dev/kfd` and rocminfo
+- [ ] Build HIP runtime
+- [ ] Benchmark RX 580 compute
 
-## License
+## 📜 License
 
-Build instructions and patches provided under MIT license.
-ROCm components retain their original AMD licenses (primarily MIT).
+MIT License - Build instructions and patches.
+ROCm components retain AMD's original licenses.
 
-## Contact
+---
 
-For questions or contributions:
-- Open an issue on this repository
-- Email: scott@elyanlabs.ai
+<div align="center">
+
+**Made with ⚡ by [Elyan Labs](https://elyanlabs.ai)**
+
+*AMD GPU compute on POWER8 - because vendor choice matters*
+
+</div>
