@@ -235,8 +235,8 @@ ROCm components retain AMD's original licenses.
 
 <div align="center">
 
-**Made with ⚡ by [Elyan Labs](https://elyanlabs.ai)**
+**[Elyan Labs](https://github.com/Scottcjn)** · 1,882 commits · 97 repos · 1,334 stars · $0 raised
 
-*AMD GPU compute on POWER8 - because vendor choice matters*
+[⭐ Star Rustchain](https://github.com/Scottcjn/Rustchain) · [📊 Q1 2026 Traction Report](https://github.com/Scottcjn/Rustchain/blob/main/docs/DEVELOPER_TRACTION_Q1_2026.md) · [Follow @Scottcjn](https://github.com/Scottcjn)
 
 </div>
